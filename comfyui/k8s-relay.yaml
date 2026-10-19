@@ -1,0 +1,89 @@
+# Image server relay WITHOUT the gateway (state of modules 1 to 5): nginx forwards HTTP and WebSocket
+# (/ws: Open WebUI waits for the end of each image on this channel) to ComfyUI.
+#   browser      http://comfyui.localhost:8080                 Traefik Ingress
+#   Open WebUI   http://comfyui.comfyui.svc.cluster.local:8188  Service comfyui
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: comfyui
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: comfyui-relay
+  namespace: comfyui
+data:
+  default.conf: |
+    map $http_upgrade $connection_upgrade {
+      default upgrade;
+      ''      '';
+    }
+    server {
+      listen 8188;
+      client_max_body_size 100m;           # images sent to ComfyUI (/upload/image, edits)
+      location = /relay-health { access_log off; return 200 "ok\n"; }
+      location / {
+        proxy_pass http://host.docker.internal:8090;
+        proxy_http_version 1.1;
+        proxy_set_header Host comfyui.localhost;   # host name expected by the route in front of ComfyUI
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_buffering off;                # previews and progress without delay
+        proxy_read_timeout 3600s;           # WebSocket kept open during a whole generation
+        proxy_send_timeout 3600s;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui-relay
+  namespace: comfyui
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: comfyui-relay }
+  template:
+    metadata:
+      labels: { app: comfyui-relay }
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.30.6-alpine
+          ports: [{ containerPort: 8188 }]
+          readinessProbe:
+            httpGet: { path: /relay-health, port: 8188 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 128Mi }
+          volumeMounts:
+            - { name: conf, mountPath: /etc/nginx/conf.d, readOnly: true }
+      volumes:
+        - name: conf
+          configMap: { name: comfyui-relay }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comfyui
+  namespace: comfyui
+spec:
+  selector: { app: comfyui-relay }
+  ports: [{ port: 8188, targetPort: 8188 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: comfyui
+  namespace: comfyui
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: comfyui.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: comfyui, port: { number: 8188 } } }
