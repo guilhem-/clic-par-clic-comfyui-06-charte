@@ -104,7 +104,7 @@ ConfigMap and the Secret.
   cautious model refuses every portrait.
 - Each image costs one more call (one to two seconds), up to three with the filter and the tool.
 - The rule only holds if ComfyUI is reachable **only** through the gateway (network policy: see
-  module 7). In the series' set, ComfyUI is still reachable on the GPU machine directly.
+  [module 7](https://github.com/guilhem-/clic-par-clic-comfyui-07-exploitation)). In the series' set, ComfyUI is still reachable on the GPU machine directly.
 - Confidentiality: descriptions go to the provider of the classification model, like the chats
   themselves.
 - The JSON verdict keeps French keywords (`accepte`, `refuse`), shared by the three places and by
@@ -114,7 +114,8 @@ ConfigMap and the Secret.
 
 - Previous module: **Who can generate images?** —
   [`clic-par-clic-comfyui-05-droits-groupes`](https://github.com/guilhem-/clic-par-clic-comfyui-05-droits-groupes).
-- Next module: **Several users, one graphics card** — `clic-par-clic-comfyui-07-…` (coming soon).
+- Next module: **Several users, one graphics card** —
+  [`clic-par-clic-comfyui-07-exploitation`](https://github.com/guilhem-/clic-par-clic-comfyui-07-exploitation).
 
 ## License
 
