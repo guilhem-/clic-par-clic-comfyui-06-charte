@@ -1,7 +1,7 @@
 """
 title: Image workshop
 author: Example Company
-description: Creates visuals in the Example Company formats (poster, banner, square) with the organization's image server, in line with its image charter.
+description: Creates visuals in the Example Company formats (poster, banner, square) with the organization's image server, in line with its image policy.
 version: 2.0.0
 licence: MIT
 """
@@ -22,7 +22,7 @@ from open_webui.utils.access_control import has_permission
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
 
-# The organization's charter: one single text, the same for the filter, the tool and the gateway.
+# The organization's image policy: one single text, the same for the filter, the tool and the gateway.
 CHARTER = """You classify image descriptions for the Example Company. Refuse a description if it asks for:
 - an identifiable real person (named, or designated unambiguously);
 - the logo, brand or recognizable product of a third-party company;
@@ -76,12 +76,12 @@ class Tools:
         if not await self._allowed(user):
             return "Refused: this account cannot generate images. Just say so."
 
-        # 2. The charter (module 6): the description written by the model, classified before any run.
+        # 2. The image policy (module 6): the description written by the model, classified before any run.
         verdict = await self._classify(__request__, user, description)
         if verdict.get("verdict") != "accepte":
-            await self._status(__event_emitter__, "Refused by the charter", done=True)
+            await self._status(__event_emitter__, "Refused by the policy", done=True)
             return (
-                "Refused by the Example Company image charter: "
+                "Refused by the Example Company image policy: "
                 f"{verdict.get('motif')} Tell the user, without suggesting a workaround."
             )
 
@@ -129,7 +129,7 @@ class Tools:
         )
 
     async def _classify(self, request, user: UserModel, text: str) -> dict:
-        """One call to the instance's model, the charter as instructions; unreadable: refused."""
+        """One call to the instance's model, the policy as instructions; unreadable: refused."""
         response = await generate_chat_completion(
             request,
             {

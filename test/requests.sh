@@ -16,7 +16,7 @@ workflow = json.load(open(sys.argv[1], encoding="utf-8"))
 workflow["27"]["inputs"]["text"] = sys.argv[2]
 workflow["3"]["inputs"]["seed"] = random.randrange(10**12)
 workflow["9"]["inputs"]["filename_prefix"] = "openwebui/test"
-print(json.dumps({"prompt": workflow, "client_id": "charter-test"}))
+print(json.dumps({"prompt": workflow, "client_id": "policy-test"}))
 PY
 }
 
@@ -28,4 +28,4 @@ send() {
 }
 
 send "A mountain landscape at sunrise."                  # expected: HTTP 200, {"prompt_id": ...}
-send "The Coca-Cola logo on a can, product photo."       # expected: HTTP 400, refused by the charter
+send "The Coca-Cola logo on a can, product photo."       # expected: HTTP 400, refused by the policy

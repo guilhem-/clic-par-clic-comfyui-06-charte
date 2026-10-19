@@ -1,4 +1,4 @@
-"""Image charter gateway: in front of ComfyUI, every queued job is classified before it is forwarded.
+"""Image policy gateway: in front of ComfyUI, every queued job is classified before it is forwarded.
 
 The nginx relay sends it only the job submission addresses (/prompt and /api/prompt); everything
 else (images, history, web socket, interface) goes straight to ComfyUI. Standard library only.
@@ -14,7 +14,7 @@ UPSTREAM = os.environ.get("COMFYUI_UPSTREAM", "http://host.docker.internal:8090"
 HOST = os.environ.get("COMFYUI_HOST", "comfyui.localhost")
 OWUI = os.environ.get("OWUI_INTERNAL", "http://open-webui.terminals.svc.cluster.local:8080")
 MODEL = os.environ.get("CHARTER_MODEL", "gpt-5.6-luna")
-REFUSAL = os.environ.get("REFUSAL_MESSAGE", "Request refused by the Example Company image charter")
+REFUSAL = os.environ.get("REFUSAL_MESSAGE", "Request refused by the Example Company image policy")
 TEXT_FIELDS = {"text", "string_a", "string_b", "prompt"}
 CHARTER = open(os.environ.get("CHARTER", "/charter/charter.md"), encoding="utf-8").read()
 token = {"value": None}
@@ -37,13 +37,13 @@ def call(url: str, body: dict, headers: dict = None) -> dict:
 
 
 def sign_in() -> None:
-    """Token of the "Image charter" robot account (user role in Open WebUI)."""
+    """Token of the "Image policy" robot account (user role in Open WebUI)."""
     r = call(f"{OWUI}/api/v1/auths/signin", {"email": os.environ["ROBOT_EMAIL"], "password": os.environ["ROBOT_PASSWORD"]})
     token["value"] = r["token"]
 
 
 def classify(text: str) -> dict:
-    """Verdict of the instance's model, the charter as instructions, on behalf of the robot."""
+    """Verdict of the instance's model, the policy as instructions, on behalf of the robot."""
     body = {"model": MODEL, "stream": False,
             "messages": [{"role": "system", "content": CHARTER}, {"role": "user", "content": text}]}
     for attempt in (1, 2):
@@ -86,7 +86,7 @@ class Gateway(BaseHTTPRequestHandler):
             verdict.setdefault("motif", "unreadable request")
             log(verdict, fields)
             message = f"{REFUSAL}: {verdict.get('motif')}"
-            error = {"error": {"type": "charter", "message": message, "details": message, "extra_info": {}}, "node_errors": {}}
+            error = {"error": {"type": "policy", "message": message, "details": message, "extra_info": {}}, "node_errors": {}}
             return self.answer(400, json.dumps(error, ensure_ascii=False).encode(), "application/json")
         self.forward(body)
 

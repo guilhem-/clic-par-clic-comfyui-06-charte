@@ -1,12 +1,12 @@
-"""Install the image charter in Open WebUI, through its API: the filter and the tool, version 2.
+"""Install the image policy in Open WebUI, through its API: the filter and the tool, version 2.
 
 Does what module 6 of the "Image generation in Open WebUI with ComfyUI" series does on screen:
-  1. creates (or updates) the "Image charter" filter function (open-webui/image_charter.py),
+  1. creates (or updates) the "Image policy" filter function (open-webui/image_charter.py),
      turns it on and makes it global: it applies to every model;
   2. replaces the code of the "Image workshop" tool with version 2 (open-webui/image_workshop.py),
      which has the description written by the model classified before any image is computed;
   3. sets the classification model in both valves (CHARTER_MODEL);
-  4. creates (or resets) the "Image charter" robot account used by the gateway (role "user"),
+  4. creates (or resets) the "Image policy" robot account used by the gateway (role "user"),
      and prints the kubectl commands that hand its credentials to the gateway.
 The third place, the gateway in front of ComfyUI, is deployed with kubectl (see README).
 
@@ -32,14 +32,14 @@ FILTER_CODE = HERE / "open-webui" / "image_charter.py"
 TOOL_CODE = HERE / "open-webui" / "image_workshop.py"
 CHARTER = HERE / "charter.md"
 VARIABLES = ("OWUI_URL", "OWUI_TOKEN", "TOOL_ID", "CHARTER_MODEL", "ROBOT_EMAIL", "ROBOT_PASSWORD", "TOOL_V1")
-FILTER = {"id": "image_charter", "name": "Image charter"}
+FILTER = {"id": "image_policy", "name": "Image policy"}
 
 
 def settings() -> dict:
     """Defaults, then .env (key=value), then the environment, which wins."""
     s = {
         "OWUI_URL": "http://127.0.0.1:8080", "TOOL_ID": "image_workshop", "CHARTER_MODEL": "gpt-5.6-luna",
-        "ROBOT_EMAIL": "image-charter@example.com",
+        "ROBOT_EMAIL": "image-policy@example.com",
     }
     env = HERE / ".env"
     if env.exists():
@@ -107,7 +107,7 @@ def update_tool() -> None:
     })
     valves = api("GET", f"/api/v1/tools/id/{S['TOOL_ID']}/valves") or {}
     api("POST", f"/api/v1/tools/id/{S['TOOL_ID']}/valves/update", {**valves, "charter_model": S["CHARTER_MODEL"]})
-    print(f"Tool {S['TOOL_ID']}: version 2 (charter check), model {S['CHARTER_MODEL']}")
+    print(f"Tool {S['TOOL_ID']}: version 2 (image policy check), model {S['CHARTER_MODEL']}")
 
 
 def find_robot():
@@ -119,10 +119,10 @@ def install_robot() -> None:
     password = S.get("ROBOT_PASSWORD") or secrets.token_hex(24) + "A1"
     robot = find_robot()
     if robot:
-        api("POST", f"/api/v1/users/{robot['id']}/update", {"role": "user", "name": "Image charter", "email": S["ROBOT_EMAIL"],
+        api("POST", f"/api/v1/users/{robot['id']}/update", {"role": "user", "name": "Image policy", "email": S["ROBOT_EMAIL"],
                                                               "profile_image_url": robot.get("profile_image_url") or "/user.png", "password": password})
     else:
-        api("POST", "/api/v1/auths/add", {"name": "Image charter", "email": S["ROBOT_EMAIL"], "password": password, "role": "user"})
+        api("POST", "/api/v1/auths/add", {"name": "Image policy", "email": S["ROBOT_EMAIL"], "password": password, "role": "user"})
     print(f"Robot {S['ROBOT_EMAIL']} ready (role user). Hand it to the gateway, without echoing the password:")
     print("  kubectl create secret generic comfyui-gateway -n comfyui \\")
     print(f"    --from-literal=ROBOT_EMAIL={S['ROBOT_EMAIL']} --from-literal=ROBOT_PASSWORD=\"$ROBOT_PASSWORD\"")

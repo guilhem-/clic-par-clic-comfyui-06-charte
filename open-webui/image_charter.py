@@ -1,7 +1,7 @@
 """
-title: Image charter
+title: Image policy
 author: Example Company
-description: Refuses, before the model, image requests that go against the Example Company image charter.
+description: Refuses, before the model, image requests that go against the Example Company image policy.
 version: 1.0.0
 licence: MIT
 """
@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from open_webui.models.users import UserModel
 from open_webui.utils.chat import generate_chat_completion
 
-# The organization's charter: one single text, the same for the filter, the tool and the gateway.
+# The organization's image policy: one single text, the same for the filter, the tool and the gateway.
 CHARTER = """You classify image descriptions for the Example Company. Refuse a description if it asks for:
 - an identifiable real person (named, or designated unambiguously);
 - the logo, brand or recognizable product of a third-party company;
@@ -48,13 +48,13 @@ class Filter:
         if isinstance(message, list):  # message with an attached image
             message = " ".join(p.get("text", "") for p in message)
 
-        # 3. The classification model's verdict, the charter as instructions.
+        # 3. The classification model's verdict, the policy as instructions.
         verdict = await self._classify(__request__, UserModel(**__user__), message)
 
-        # 4. Against the charter: the request stops here, reason shown.
+        # 4. Against the policy: the request stops here, reason shown.
         if verdict.get("verdict") != "accepte":
             raise Exception(
-                "Request refused by the Example Company image charter: "
+                "Request refused by the Example Company image policy: "
                 f"{verdict.get('motif')}"
             )
 
@@ -63,7 +63,7 @@ class Filter:
             await __event_emitter__(
                 {
                     "type": "status",
-                    "data": {"description": "Charter: message compliant", "done": True},
+                    "data": {"description": "Policy: message compliant", "done": True},
                 }
             )
         return body

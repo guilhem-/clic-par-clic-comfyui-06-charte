@@ -1,12 +1,14 @@
-# Image server relay WITH the image charter gateway (module 6).
+# Image server relay WITH the image policy gateway (module 6).
 # The relay is an nginx that forwards HTTP and WebSocket to ComfyUI (here, ComfyUI runs in another
 # cluster with the GPU, published on host.docker.internal:8090 under the host name comfyui.localhost;
 # adapt the two proxy_pass lines and COMFYUI_UPSTREAM / COMFYUI_HOST to your setup).
 # Second container, the gateway (gateway/gateway.py, Python standard library): nginx sends it only the
 # job submission addresses (/prompt, /api/prompt); it has the workflow's texts classified by a model of
-# Open WebUI, on behalf of the "Image charter" robot account, then refuses (HTTP 400 in ComfyUI's
+# Open WebUI, on behalf of the "Image policy" robot account, then refuses (HTTP 400 in ComfyUI's
 # format, one log line) or forwards the request unchanged.
-# Code and charter: ConfigMap comfyui-gateway; robot account: Secret comfyui-gateway (see README).
+# Code and policy: ConfigMap comfyui-gateway (optional key refusal-message: the start of the refusal
+# message, in your language); robot account: Secret comfyui-gateway (see README).
+# The Service comfyui of k8s-relay.yaml is repeated at the end: this file is enough on its own.
 # Back to the plain relay: kubectl apply -f k8s-relay.yaml.
 apiVersion: v1
 kind: ConfigMap
@@ -81,7 +83,7 @@ spec:
             - { name: COMFYUI_HOST, value: "comfyui.localhost" }
             - { name: ROBOT_EMAIL, valueFrom: { secretKeyRef: { name: comfyui-gateway, key: ROBOT_EMAIL } } }
             - { name: ROBOT_PASSWORD, valueFrom: { secretKeyRef: { name: comfyui-gateway, key: ROBOT_PASSWORD } } }
-            - { name: REFUSAL_MESSAGE, value: "Request refused by the Example Company image charter" }
+            - { name: REFUSAL_MESSAGE, valueFrom: { configMapKeyRef: { name: comfyui-gateway, key: refusal-message, optional: true } } }
           resources:
             requests: { cpu: 10m, memory: 32Mi }
             limits: { memory: 128Mi }
@@ -92,3 +94,12 @@ spec:
           configMap: { name: comfyui-relay }
         - name: gateway
           configMap: { name: comfyui-gateway }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comfyui
+  namespace: comfyui
+spec:
+  selector: { app: comfyui-relay }
+  ports: [{ port: 8188, targetPort: 8188 }]
