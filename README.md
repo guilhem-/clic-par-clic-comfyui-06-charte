@@ -26,6 +26,7 @@ through. The description written by the model names the physicist: the gateway r
 | `open-webui/image_charter.py` | Filter function (`inlet`), shown in the English and German videos; the French video shows its French version, `charte_images.py` (same structure, same blocks) |
 | `open-webui/image_workshop.py` | The "Image workshop" tool of modules 4 and 5, **version 2**: block 2 has the description classified (`_classify`) and returns a refusal sentence to the model |
 | `open-webui/workshop-instructions.txt` | System prompt of the "Image workshop" model (module 4) |
+| `charter.de.md`, `open-webui/image_charter.de.py`, `open-webui/image_workshop.de.py`, `open-webui/workshop-instructions.de.txt` | German variants shown in the German video: same code and blocks, policy, status and refusal messages in German (`LANGUAGE=de`) |
 | `gateway/gateway.py` | The gateway: reads every text field of the workflow, has them classified by Open WebUI's chat API on behalf of a robot account, refuses when in doubt, logs each refusal, forwards accepted jobs unchanged. Python standard library only |
 | `comfyui/k8s-relay-gateway.yaml` | The relay (nginx) with the gateway as a second container: only `/prompt` and `/api/prompt` go to the gateway, everything else (images, history, web socket) goes straight to ComfyUI |
 | `comfyui/k8s-relay.yaml` | The relay alone (modules 1 to 5), to go back |
@@ -58,12 +59,18 @@ By hand, as in the video:
 2. **Workspace › Tools › Image workshop**: replace the code with `open-webui/image_workshop.py`
    (version 2), **Save**.
 
+**German version** (as in the German video): name `Bildrichtlinie`, id `image_policy`, paste
+`open-webui/image_charter.de.py`, then `open-webui/image_workshop.de.py` for the tool, and give the
+"Image workshop" model `open-webui/workshop-instructions.de.txt` as its system prompt. Same code
+and blocks; only the policy, the status and the refusal messages are German.
+
 Or through the API:
 
 ```bash
 cp .env.example .env              # OWUI_URL, OWUI_TOKEN (administrator), TOOL_ID, CHARTER_MODEL
 python setup_charter.py           # filter (on, global), tool version 2, robot account
 python setup_charter.py --check   # what is in place (and a classification as the robot)
+LANGUAGE=de python setup_charter.py   # German variants (or LANGUAGE=de in .env)
 ```
 
 ### 2. The gateway, in front of ComfyUI
@@ -83,7 +90,15 @@ kubectl rollout status deployment/comfyui-relay -n comfyui
 Adapt `COMFYUI_UPSTREAM`, `COMFYUI_HOST`, `OWUI_INTERNAL` and the two `proxy_pass` lines to your
 setup. The refusal starts with "Request refused by the Example Company image policy"; for another
 language, add `--from-literal=refusal-message="…"` to the ConfigMap (and have the policy ask for
-the reason in that language). Back to the relay alone: `kubectl apply -f comfyui/k8s-relay.yaml`,
+the reason in that language). In German, as in the video:
+
+```bash
+kubectl create configmap comfyui-gateway -n comfyui \
+  --from-file=gateway.py=gateway/gateway.py --from-file=charter.md=charter.de.md \
+  --from-literal=refusal-message="Anfrage von der Bildrichtlinie der Beispielorganisation abgelehnt"
+```
+
+Back to the relay alone: `kubectl apply -f comfyui/k8s-relay.yaml`,
 then delete the ConfigMap and the Secret.
 
 ## Try it

@@ -16,6 +16,8 @@ Usage:
   python setup_charter.py --undo     # filter deleted, tool back to version 1 (if found), robot deleted
 
 Settings: .env file (see .env.example); environment variables take precedence.
+LANGUAGE=de installs the German variants (open-webui/*.de.py, charter.de.md): same code, German
+policy, status and refusal messages, as shown in the German video.
 No dependency: Python 3.10 or newer, standard library only.
 """
 import json
@@ -31,7 +33,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 FILTER_CODE = HERE / "open-webui" / "image_charter.py"
 TOOL_CODE = HERE / "open-webui" / "image_workshop.py"
 CHARTER = HERE / "charter.md"
-VARIABLES = ("OWUI_URL", "OWUI_TOKEN", "TOOL_ID", "CHARTER_MODEL", "ROBOT_EMAIL", "ROBOT_PASSWORD", "TOOL_V1")
+VARIABLES = ("OWUI_URL", "OWUI_TOKEN", "TOOL_ID", "CHARTER_MODEL", "ROBOT_EMAIL", "ROBOT_PASSWORD", "TOOL_V1", "LANGUAGE")
 FILTER = {"id": "image_policy", "name": "Image policy"}
 
 
@@ -39,7 +41,7 @@ def settings() -> dict:
     """Defaults, then .env (key=value), then the environment, which wins."""
     s = {
         "OWUI_URL": "http://127.0.0.1:8080", "TOOL_ID": "image_workshop", "CHARTER_MODEL": "gpt-5.6-luna",
-        "ROBOT_EMAIL": "image-policy@example.com",
+        "ROBOT_EMAIL": "image-policy@example.com", "LANGUAGE": "en",
     }
     env = HERE / ".env"
     if env.exists():
@@ -55,6 +57,15 @@ def settings() -> dict:
 
 
 S = settings()
+
+# German variants: same code and blocks, the texts read by the user and by the classifier in German.
+if S["LANGUAGE"].lower() == "de":
+    FILTER_CODE = HERE / "open-webui" / "image_charter.de.py"
+    TOOL_CODE = HERE / "open-webui" / "image_workshop.de.py"
+    CHARTER = HERE / "charter.de.md"
+    FILTER["name"] = "Bildrichtlinie"
+elif S["LANGUAGE"].lower() != "en":
+    sys.exit(f"LANGUAGE={S['LANGUAGE']}: en or de.")
 
 
 def api(method: str, path: str, body=None, tolerate=False, token=None):
@@ -131,6 +142,10 @@ def install_robot() -> None:
         print("  (generated password written to .robot-password, git-ignored: export ROBOT_PASSWORD=$(cat .robot-password))")
 
 
+TEST_REQUEST = ("Das Coca-Cola-Logo auf einer Dose, Produktfoto." if S["LANGUAGE"].lower() == "de"
+                else "The Coca-Cola logo on a can, product photo.")
+
+
 def check() -> None:
     f = api("GET", f"/api/v1/functions/id/{FILTER['id']}", tolerate=True)
     print(f"Filter: {'on' if f and f['is_active'] else 'off'}, {'global' if f and f['is_global'] else 'not global'}" if f else "Filter: absent")
@@ -144,7 +159,7 @@ def check() -> None:
         token = json.loads(urllib.request.urlopen(r, timeout=30).read())["token"]
         answer = api("POST", "/api/chat/completions", {"model": S["CHARTER_MODEL"], "stream": False, "messages": [
             {"role": "system", "content": CHARTER.read_text(encoding="utf-8")},
-            {"role": "user", "content": "The Coca-Cola logo on a can, product photo."}]}, token=token)
+            {"role": "user", "content": TEST_REQUEST}]}, token=token)
         print(f"Classification as the robot: {answer['choices'][0]['message']['content']}")
 
 
